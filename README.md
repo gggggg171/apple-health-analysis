@@ -33,14 +33,23 @@ pip install -r requirements.txt
 # 基础分析（终端输出）
 python analyze.py /path/to/apple_health_export/
 
+# 直接传入 zip 文件
+python analyze.py /path/to/apple_health_export.zip
+
 # 指定体重目标
 python analyze.py /path/to/apple_health_export/ --target 72
+
+# 生成可视化 HTML 报告（自动在浏览器中打开）
+python analyze.py /path/to/apple_health_export/ --target 72 --html
 
 # 生成完整报告文件
 python analyze.py /path/to/apple_health_export/ --target 72 --output report.txt
 
 # 只看最近 N 天的数据
 python analyze.py /path/to/apple_health_export/ --days 30
+
+# 监控模式：自动检测新文件并分析（配合 iCloud 同步）
+python analyze.py ~/HealthExport/ --watch --target 72 --html
 ```
 
 ### 如何导出 Apple Health 数据
@@ -57,10 +66,14 @@ apple-health-analysis/
 ├── analyze.py              # CLI 入口
 ├── lib/
 │   ├── __init__.py
-│   ├── parser.py           # Apple Health XML 流式解析
+│   ├── parser.py           # Apple Health XML 流式解析 + zip 解压
 │   ├── metrics.py          # 健康指标计算与分析
-│   ├── report.py           # 报告生成
-│   └── training_plan.py    # 训练计划生成
+│   ├── report.py           # 文本报告生成
+│   ├── html_report.py      # 可视化 HTML 报告（Chart.js）
+│   ├── training_plan.py    # 训练计划生成
+│   └── watcher.py          # 文件夹监控（自动同步分析）
+├── docs/
+│   └── ios-shortcut-setup.md  # iOS 快捷指令配置指南
 ├── configs/
 │   ├── hermes/SKILL.md     # Hermes Agent 技能配置
 │   ├── claude-code/        # Claude Code 技能配置
@@ -68,6 +81,16 @@ apple-health-analysis/
 ├── requirements.txt
 └── README.md
 ```
+
+## 自动同步（iPhone → Mac）
+
+通过 iCloud Drive 实现 iPhone 数据自动同步到 Mac 并分析：
+
+```
+iPhone Apple Health → 自动导出 → iCloud Drive → Mac --watch 模式 → HTML 报告
+```
+
+详见 [iOS 快捷指令配置指南](docs/ios-shortcut-setup.md)。
 
 ## AI Agent 集成
 

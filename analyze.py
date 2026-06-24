@@ -24,6 +24,7 @@ from lib.parser import find_health_xml, parse_health_data, extract_zip
 from lib.metrics import analyze
 from lib.report import generate_report, generate_training_plan_text
 from lib.html_report import generate_html_report
+from lib.watcher import watch_folder
 
 
 def main():
@@ -78,8 +79,28 @@ def main():
         action="store_true",
         help="生成可视化 HTML 报告",
     )
+    parser.add_argument(
+        "--watch", "-w",
+        action="store_true",
+        help="监控模式：持续监控目录，自动分析新文件",
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=60,
+        help="监控模式检查间隔（秒，默认 60）",
+    )
 
     args = parser.parse_args()
+
+    # ── 监控模式 ──
+    if args.watch:
+        watch_path = os.path.abspath(args.export_dir)
+        if not os.path.isdir(watch_path):
+            print(f"错误: 监控模式需要目录路径: {watch_path}", file=sys.stderr)
+            sys.exit(1)
+        watch_folder(watch_path, target=args.target, interval=args.interval)
+        return
 
     # 验证输入
     input_path = args.export_dir
