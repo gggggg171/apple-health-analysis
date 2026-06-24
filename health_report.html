@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Health 健康分析报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --card: #16213e;
+            --card-border: #0f3460;
+            --text: #e0e0e0;
+            --text-muted: #8899aa;
+            --accent: #4cc9f0;
+            --accent2: #7dd3c0;
+            --accent3: #f0a500;
+            --accent4: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .card h2 {
+            font-size: 1.1em;
+            color: var(--accent);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: var(--accent2);
+        }
+        .stat-label { color: var(--text-muted); font-size: 0.9em; }
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .stat-row:last-child { border-bottom: none; }
+        .chart-card { grid-column: span 2; }
+        .full-width { grid-column: 1 / -1; }
+        .score-ring {
+            width: 120px; height: 120px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2em; font-weight: 700; margin: 0 auto 15px;
+            background: conic-gradient(var(--accent) 0deg, var(--accent2) 100.8deg, rgba(255,255,255,0.1) 100.8deg);
+            position: relative;
+        }
+        .score-ring::after {
+            content: ''; position: absolute;
+            width: 90px; height: 90px; border-radius: 50%;
+            background: var(--card);
+        }
+        .score-ring span { position: relative; z-index: 1; }
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        th {
+            text-align: left; padding: 10px 12px;
+            background: rgba(255,255,255,0.05);
+            color: var(--accent); font-weight: 600;
+            border-bottom: 2px solid var(--card-border);
+        }
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        tr:hover { background: rgba(255,255,255,0.03); }
+        .intensity {
+            padding: 2px 10px; border-radius: 12px;
+            font-size: 0.85em; font-weight: 600;
+        }
+        .intensity-低 { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .intensity-中 { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .intensity-高 { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .badge {
+            display: inline-block; padding: 4px 12px;
+            border-radius: 20px; font-size: 0.85em; font-weight: 600;
+        }
+        .badge-good { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .badge-warn { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .badge-bad { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .notes li { padding: 6px 0; color: var(--text-muted); }
+        .notes li::marker { color: var(--accent); }
+        canvas { max-height: 300px; }
+        @media (max-width: 768px) {
+            .chart-card { grid-column: span 1; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Apple Health 健康分析报告</h1>
+    <p class="subtitle">
+         · 0岁 · 0cm ·
+        分析周期: 最近 90 天 ·
+        生成于 2026-06-24 11:03
+    </p>
+
+    <!-- 顶部卡片 -->
+    <div class="grid">
+        <div class="card" style="text-align:center;">
+            <h2>📊 健康评分</h2>
+            <div class="score-ring"><span>28</span></div>
+            <div style="font-size:0.85em;color:var(--text-muted);">
+                BMI 0/25 · 活动 25/35<br>
+                心肺 0/25 · 一致性 3/15
+            </div>
+        </div>
+        <div class="card">
+            <h2>⚖️ 体重</h2>
+            <div class="stat-value">0.0 kg</div>
+            <div class="stat-label">BMI — (—)</div>
+            <div style="margin-top:12px;">
+                <div class="stat-row">
+                    <span>起始体重</span><span>0.0 kg</span>
+                </div>
+                <div class="stat-row">
+                    <span>总变化</span><span style="color:#e74c3c">+0.0 kg</span>
+                </div>
+                <div class="stat-row">
+                    <span>近30天</span><span style="color:#e74c3c">+0.0 kg</span>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>🏃 运动概况</h2>
+            <div class="stat-value">0</div>
+            <div class="stat-label">总运动次数 · 0 小时</div>
+            <div style="margin-top:12px;">
+                <div class="stat-row">
+                    <span>日均步数</span><span>18,000</span>
+                </div>
+                <div class="stat-row">
+                    <span>日均消耗</span><span>950 kcal</span>
+                </div>
+                <div class="stat-row">
+                    <span>日均运动</span><span>60 分钟</span>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>💓 心肺健康</h2>
+            <div style="display:flex;gap:30px;margin-bottom:10px;">
+                <div>
+                    <div class="stat-value" style="font-size:1.8em;">—</div>
+                    <div class="stat-label">静息心率 (bpm)</div>
+                </div>
+                <div>
+                    <div class="stat-value" style="font-size:1.8em;">—</div>
+                    <div class="stat-label">VO2Max (—)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="grid">
+        <div class="card chart-card">
+            <h2>📈 月平均体重趋势</h2>
+            <canvas id="weightChart"></canvas>
+        </div>
+        <div class="card chart-card">
+            <h2>📅 近14天体重变化</h2>
+            <canvas id="recentWeightChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>🏋️ 运动类型分布</h2>
+            <canvas id="workoutChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>📊 健康评分雷达</h2>
+            <canvas id="scoreChart"></canvas>
+        </div>
+        <div class="card chart-card">
+            <h2>👟 近30天每日步数</h2>
+            <canvas id="stepsChart"></canvas>
+        </div>
+        <div class="card chart-card">
+            <h2>🔥 近30天活动消耗</h2>
+            <canvas id="energyChart"></canvas>
+        </div>
+        
+        
+    </div>
+
+    <!-- 热量计划 -->
+    
+
+    <!-- 训练计划 -->
+    <div class="grid">
+        <div class="card full-width">
+            <h2>🏋️ 周训练计划</h2>
+            <table>
+                <tr><th>星期</th><th>训练内容</th><th>时长</th><th>强度</th><th>备注</th></tr>
+                
+        <tr>
+            <td>周一</td>
+            <td>中等配速跑步</td>
+            <td>40分钟</td>
+            <td><span class="intensity intensity-中">中</span></td>
+            <td>心率保持130-150bpm</td>
+        </tr>
+        <tr>
+            <td>周二</td>
+            <td>上肢力量训练</td>
+            <td>45分钟</td>
+            <td><span class="intensity intensity-中">中</span></td>
+            <td>俯卧撑4×15、哑铃推举4×12、划船4×12、平板支撑3×60s</td>
+        </tr>
+        <tr>
+            <td>周三</td>
+            <td>快走或轻松跑</td>
+            <td>45分钟</td>
+            <td><span class="intensity intensity-低">低</span></td>
+            <td>恢复日，心率120-140bpm</td>
+        </tr>
+        <tr>
+            <td>周四</td>
+            <td>下肢力量训练</td>
+            <td>45分钟</td>
+            <td><span class="intensity intensity-中">中</span></td>
+            <td>深蹲4×15、弓步蹲4×12、罗马尼亚硬拉4×12、臀桥4×15</td>
+        </tr>
+        <tr>
+            <td>周五</td>
+            <td>HIIT间歇跑</td>
+            <td>30分钟</td>
+            <td><span class="intensity intensity-高">高</span></td>
+            <td>冲刺200m + 慢跑200m × 8组</td>
+        </tr>
+        <tr>
+            <td>周六</td>
+            <td>中长跑</td>
+            <td>50分钟</td>
+            <td><span class="intensity intensity-中">中</span></td>
+            <td>配速5'30"-6'00"，保持匀速</td>
+        </tr>
+        <tr>
+            <td>周日</td>
+            <td>休息 / 轻度步行</td>
+            <td>30分钟</td>
+            <td><span class="intensity intensity-低">低</span></td>
+            <td>主动恢复</td>
+        </tr>
+            </table>
+        </div>
+        <div class="card full-width">
+            <h2>🥗 每日饮食建议</h2>
+            <table>
+                <tr><th>餐次</th><th>建议</th><th>热量</th></tr>
+                
+        <tr>
+            <td>早餐</td>
+            <td>鸡蛋2个 + 全麦面包1片 + 牛奶250ml</td>
+            <td>400 kcal</td>
+        </tr>
+        <tr>
+            <td>午餐</td>
+            <td>米饭150g + 瘦肉/鱼150g + 蔬菜不限量</td>
+            <td>650 kcal</td>
+        </tr>
+        <tr>
+            <td>加餐</td>
+            <td>水果1份 + 坚果一小把(15g)</td>
+            <td>200 kcal</td>
+        </tr>
+        <tr>
+            <td>晚餐</td>
+            <td>米饭100g + 鸡胸肉/鱼150g + 蔬菜</td>
+            <td>550 kcal</td>
+        </tr>
+        <tr>
+            <td>运动后</td>
+            <td>蛋白粉1勺 或 鸡蛋2个</td>
+            <td>200 kcal</td>
+        </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- 注意事项 -->
+    <div class="grid">
+        <div class="card full-width">
+            <h2>⚠️ 注意事项</h2>
+            <ul class="notes">
+                <li>每天饮水 2.5-3L</li><li>蛋白质摄入 120-150g/天（约 1.6-2g/kg 体重）</li><li>每周称重 1-2 次（早起排便后），不要每天称</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 每日明细 -->
+    <div class="grid">
+        <div class="card full-width">
+            <h2>📋 每日明细（最近14天）</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <tr>
+                        <th>日期</th><th>体重</th><th>步数</th>
+                        <th>消耗(kcal)</th><th>运动(分钟)</th>
+                        <th>心率</th><th>VO2Max</th><th>运动类型</th>
+                    </tr>
+                    
+        <tr>
+            <td>2026-06-18</td>
+            <td>—</td>
+            <td>21,000</td>
+            <td>1,100</td>
+            <td>75</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td>2026-06-19</td>
+            <td>—</td>
+            <td>20,000</td>
+            <td>1,050</td>
+            <td>70</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td>2026-06-20</td>
+            <td>—</td>
+            <td>19,000</td>
+            <td>1,000</td>
+            <td>65</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td>2026-06-21</td>
+            <td>—</td>
+            <td>18,000</td>
+            <td>950</td>
+            <td>60</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td>2026-06-22</td>
+            <td>—</td>
+            <td>17,000</td>
+            <td>900</td>
+            <td>55</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td>2026-06-23</td>
+            <td>—</td>
+            <td>16,000</td>
+            <td>850</td>
+            <td>50</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td>2026-06-24</td>
+            <td>—</td>
+            <td>15,000</td>
+            <td>800</td>
+            <td>45</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+        </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const chartDefaults = {
+    color: '#8899aa',
+    borderColor: 'rgba(255,255,255,0.1)',
+};
+Chart.defaults.color = chartDefaults.color;
+Chart.defaults.borderColor = chartDefaults.borderColor;
+
+// 月均体重
+new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '体重 (kg)',
+            data: [],
+            borderColor: '#4cc9f0',
+            backgroundColor: 'rgba(76,201,240,0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#4cc9f0',
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+// 近14天体重
+new Chart(document.getElementById('recentWeightChart'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '体重 (kg)',
+            data: [],
+            borderColor: '#7dd3c0',
+            backgroundColor: 'rgba(125,211,192,0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+// 运动类型
+new Chart(document.getElementById('workoutChart'), {
+    type: 'doughnut',
+    data: {
+        labels: [],
+        datasets: [{
+            data: [],
+            backgroundColor: [],
+            borderWidth: 0,
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 15 } } } }
+});
+
+// 健康评分雷达
+new Chart(document.getElementById('scoreChart'), {
+    type: 'radar',
+    data: {
+        labels: ['BMI', '活动', '心肺', '一致性'],
+        datasets: [{
+            label: '评分',
+            data: [0, 25, 0, 3],
+            backgroundColor: 'rgba(76,201,240,0.2)',
+            borderColor: '#4cc9f0',
+            pointBackgroundColor: '#4cc9f0',
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: { r: { beginAtZero: true, max: 25, ticks: { stepSize: 5 } } },
+        plugins: { legend: { display: false } }
+    }
+});
+
+// 每日步数
+new Chart(document.getElementById('stepsChart'), {
+    type: 'bar',
+    data: {
+        labels: ["06-18", "06-19", "06-20", "06-21", "06-22", "06-23", "06-24"],
+        datasets: [{
+            label: '步数',
+            data: [21000, 20000, 19000, 18000, 17000, 16000, 15000],
+            backgroundColor: 'rgba(125,211,192,0.6)',
+            borderColor: '#7dd3c0',
+            borderWidth: 1,
+            borderRadius: 4,
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+// 活动消耗
+new Chart(document.getElementById('energyChart'), {
+    type: 'bar',
+    data: {
+        labels: ["06-18", "06-19", "06-20", "06-21", "06-22", "06-23", "06-24"],
+        datasets: [{
+            label: '消耗 (kcal)',
+            data: [1100, 1050, 1000, 950, 900, 850, 800],
+            backgroundColor: 'rgba(240,165,0,0.6)',
+            borderColor: '#f0a500',
+            borderWidth: 1,
+            borderRadius: 4,
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+</script>
+
+
+</body>
+</html>
