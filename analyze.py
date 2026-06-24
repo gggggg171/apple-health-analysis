@@ -13,14 +13,17 @@ Apple Health Analyzer — CLI 入口
 
 import argparse
 import os
+import shutil
 import sys
+import tempfile
 
 # 确保 lib 可导入
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib.parser import find_health_xml, parse_health_data
+from lib.parser import find_health_xml, parse_health_data, extract_zip
 from lib.metrics import analyze
 from lib.report import generate_report, generate_training_plan_text
+from lib.html_report import generate_html_report
 
 
 def main():
@@ -36,7 +39,7 @@ def main():
     )
     parser.add_argument(
         "export_dir",
-        help="Apple Health 导出目录路径（包含 export.xml 的文件夹）",
+        help="Apple Health 导出目录或 zip 文件路径",
     )
     parser.add_argument(
         "--target", "-t",
@@ -70,18 +73,38 @@ def main():
         action="store_true",
         help="输出 JSON 格式的分析结果",
     )
+    parser.add_argument(
+        "--html",
+        action="store_true",
+        help="生成可视化 HTML 报告",
+    )
 
     args = parser.parse_args()
 
-    # 验证目录
-    if not os.path.isdir(args.export_dir):
-        print(f"错误: 目录不存在: {args.export_dir}", file=sys.stderr)
+    # 验证输入
+    input_path = args.export_dir
+    temp_dir = None
+
+    if not os.path.exists(input_path):
+        print(f"错误: 路径不存在: {input_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # 如果是 zip 文件，先解压
+    if input_path.lower().endswith(".zip"):
+        print("正在解压 zip 文件...", file=sys.stderr)
+        temp_dir = tempfile.mkdtemp(prefix="apple_health_")
+        export_dir = extract_zip(input_path, temp_dir)
+        print(f"解压完成: {export_dir}", file=sys.stderr)
+    elif os.path.isdir(input_path):
+        export_dir = input_path
+    else:
+        print(f"错误: 请提供目录或 zip 文件: {input_path}", file=sys.stderr)
         sys.exit(1)
 
     # 查找 XML 文件
     print("正在查找 Apple Health 数据文件...", file=sys.stderr)
     try:
-        xml_path = find_health_xml(args.export_dir)
+        xml_path = find_health_xml(export_dir)
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)
         sys.exit(1)
@@ -126,8 +149,25 @@ def main():
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(report)
         print(f"\n报告已保存到: {args.output}", file=sys.stderr)
+    elif args.json:
+        print(report)
     else:
         print("\n" + report)
+
+    # 生成 HTML 可视化报告
+    if args.html:
+        html_path = args.output.replace(".txt", ".html") if args.output else "health_report.html"
+        html_content = generate_html_report(result)
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        print(f"HTML 报告已保存到: {html_path}", file=sys.stderr)
+        # 尝试自动打开
+        import webbrowser
+        webbrowser.open("file://" + os.path.abspath(html_path))
+
+    # 清理临时目录
+    if temp_dir and os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def _result_to_dict(result) -> dict:

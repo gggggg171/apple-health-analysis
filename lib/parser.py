@@ -5,6 +5,10 @@ Apple Health XML 流式解析器
 内存占用低，解析速度快。
 """
 
+import os
+import zipfile
+import tempfile
+import shutil
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -132,7 +136,38 @@ class ParseResult:
     parse_time_sec: float
 
 
-# ── 解析器 ────────────────────────────────────────────────────────
+# ── 解压与文件查找 ────────────────────────────────────────────────
+
+def extract_zip(zip_path: str, extract_to: str = None) -> str:
+    """
+    解压 Apple Health 导出的 zip 文件。
+
+    Args:
+        zip_path: zip 文件路径
+        extract_to: 解压目标目录（None = 临时目录）
+
+    Returns:
+        解压后的目录路径
+    """
+    if extract_to is None:
+        extract_to = tempfile.mkdtemp(prefix="apple_health_")
+
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        zf.extractall(extract_to)
+
+    # Apple Health 导出的 zip 通常解压后有一个 apple_health_export 子目录
+    # 或者直接就是 export.xml
+    subdirs = [
+        d for d in os.listdir(extract_to)
+        if os.path.isdir(os.path.join(extract_to, d))
+    ]
+
+    # 如果只有一个子目录，进入它
+    if len(subdirs) == 1:
+        return os.path.join(extract_to, subdirs[0])
+
+    return extract_to
+
 
 def find_health_xml(export_dir: str) -> str:
     """在导出目录中找到 Health XML 文件"""
