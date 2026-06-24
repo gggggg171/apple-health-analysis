@@ -18,7 +18,7 @@
 ### 安装
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/apple-health-analysis.git
+git clone https://github.com/gggggg171/apple-health-analysis.git
 cd apple-health-analysis
 ```
 
