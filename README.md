@@ -48,13 +48,14 @@ python analyze.py ~/HealthExport/ --watch --target 72 --html
 
 1. 打开 iPhone「健康」App
 2. 点右上角头像 → 「导出所有健康数据」
-3. 选「存储到"文件"」→ iCloud Drive
-4. Mac 上文件会自动同步，用 `--watch` 模式自动分析
+3. 选「存储到"文件"」→ iCloud Drive → 选一个文件夹
+4. 导出文件名为 `导出.zip`，会自动同步到 Mac
+5. 用 `--watch` 模式自动检测并分析
 
 ## 每周工作流
 
 ```
-iPhone 健康 App → 导出 zip → iCloud Drive → Mac 自动分析 → HTML 报告
+iPhone 健康 App → 导出「导出.zip」→ iCloud Drive → Mac 自动分析 → HTML 报告
 ```
 
 启动监控后，每周只需在 iPhone 上点一次「导出」，Mac 会自动完成剩下的一切：
@@ -63,7 +64,8 @@ iPhone 健康 App → 导出 zip → iCloud Drive → Mac 自动分析 → HTML 
 # 在 Mac 终端运行（首次）
 mkdir -p ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport
 
-# 启动监控
+# 把 iPhone 导出的「导出.zip」放到这个目录
+# 然后启动监控
 python analyze.py ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/ \
     --watch --target 72 --html --interval 300
 ```
