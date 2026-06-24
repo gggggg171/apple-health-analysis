@@ -81,6 +81,12 @@ def main():
         help="生成可视化 HTML 报告",
     )
     parser.add_argument(
+        "--theme",
+        choices=["ice", "sunset", "forest"],
+        default="ice",
+        help="HTML 报告配色方案：ice(冰川蓝), sunset(暖阳橙), forest(森林绿)",
+    )
+    parser.add_argument(
         "--watch", "-w",
         action="store_true",
         help="监控模式：持续监控目录，自动分析新文件",
@@ -201,7 +207,7 @@ def main():
     # 生成 HTML 可视化报告
     if args.html:
         html_path = args.output.replace(".txt", ".html") if args.output else "health_report.html"
-        html_content = generate_html_report(result)
+        html_content = generate_html_report(result, theme=args.theme)
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
         print(f"HTML 报告已保存到: {html_path}", file=sys.stderr)

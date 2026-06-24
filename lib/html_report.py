@@ -2,6 +2,7 @@
 可视化 HTML 报告生成器
 
 生成自包含的 HTML 健康分析报告，使用 Chart.js 绘制图表。
+支持三种配色方案：ice（冰川蓝）、sunset（暖阳绿）、forest（森林绿）。
 """
 
 import json
@@ -10,7 +11,42 @@ from datetime import datetime
 from .metrics import AnalysisResult
 
 
-def generate_html_report(result: AnalysisResult) -> str:
+# ── 配色方案 ──────────────────────────────────────────────────────
+
+THEMES = {
+    "ice": {
+        "name": "🧊 冰川蓝",
+        "bg": "#1a1a2e", "card": "#16213e", "border": "#0f3460",
+        "text": "#e0e0e0", "muted": "#8899aa",
+        "accent": "#4cc9f0", "accent2": "#7dd3c0",
+        "bar1": "#4cc9f0", "bar2": "#7dd3c0", "bar3": "#3d8eb9",
+        "workout_colors": ["#7dd3c0", "#a8d8a8", "#d4a574", "#c49b7a",
+                           "#8fb5a3", "#b8c9a3", "#d1b894", "#9ec5c5"],
+    },
+    "sunset": {
+        "name": "🌅 暖阳橙",
+        "bg": "#1a1410", "card": "#2a1f16", "border": "#3d2e1e",
+        "text": "#f0e8dc", "muted": "#9a8570",
+        "accent": "#f0a030", "accent2": "#e8c56d",
+        "bar1": "#f0a030", "bar2": "#e8c56d", "bar3": "#c47a20",
+        "workout_colors": ["#e8c56d", "#f0a030", "#d4a574", "#c49b7a",
+                           "#b8a060", "#a89050", "#d1b894", "#c5a870"],
+    },
+    "forest": {
+        "name": "🌿 森林绿",
+        "bg": "#0f1a12", "card": "#162a1a", "border": "#1e3d24",
+        "text": "#e0f0e4", "muted": "#6b9a75",
+        "accent": "#4ade80", "accent2": "#86efac",
+        "bar1": "#4ade80", "bar2": "#86efac", "bar3": "#22c55e",
+        "workout_colors": ["#86efac", "#4ade80", "#a8d8a8", "#6b9a75",
+                           "#22c55e", "#16a34a", "#86efac", "#4ade80"],
+    },
+}
+
+DEFAULT_THEME = "ice"
+
+
+def generate_html_report(result: AnalysisResult, theme: str = DEFAULT_THEME) -> str:
     """生成完整的 HTML 可视化报告"""
     wt = result.weight_trend
     ap = result.activity_profile
@@ -18,6 +54,9 @@ def generate_html_report(result: AnalysisResult) -> str:
     sc = result.health_score
     cp = result.calorie_plan
     p = result.user_profile
+
+    # 获取主题配色
+    t = THEMES.get(theme, THEMES[DEFAULT_THEME])
 
     # 安全取值（None → 默认值）
     bmi_val = wt.bmi or 0
@@ -126,11 +165,8 @@ def generate_html_report(result: AnalysisResult) -> str:
     # 健康评分数据
     score_data = json.dumps([sc.bmi_score, sc.activity_score, sc.cardio_score, sc.consistency_score])
 
-    # 运动类型颜色
-    workout_colors = json.dumps([
-        "#7dd3c0", "#a8d8a8", "#d4a574", "#c49b7a",
-        "#8fb5a3", "#b8c9a3", "#d1b894", "#9ec5c5"
-    ][:len(workout_labels)])
+    # 运动类型颜色（使用主题配色）
+    workout_colors = json.dumps(t["workout_colors"][:len(workout_labels)])
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -141,13 +177,13 @@ def generate_html_report(result: AnalysisResult) -> str:
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {{
-            --bg: #1a1a2e;
-            --card: #16213e;
-            --card-border: #0f3460;
-            --text: #e0e0e0;
-            --text-muted: #8899aa;
-            --accent: #4cc9f0;
-            --accent2: #7dd3c0;
+            --bg: {t['bg']};
+            --card: {t['card']};
+            --card-border: {t['border']};
+            --text: {t['text']};
+            --text-muted: {t['muted']};
+            --accent: {t['accent']};
+            --accent2: {t['accent2']};
             --accent3: #f0a500;
             --accent4: #e74c3c;
             --success: #2ecc71;
