@@ -21,6 +21,7 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.parser import find_health_xml, parse_health_data, extract_zip
+from lib.json_import import parse_json_health_data, parse_multiple_json, find_json_files
 from lib.metrics import analyze
 from lib.report import generate_report, generate_training_plan_text
 from lib.html_report import generate_html_report
@@ -110,39 +111,61 @@ def main():
         print(f"错误: 路径不存在: {input_path}", file=sys.stderr)
         sys.exit(1)
 
-    # 如果是 zip 文件，先解压
-    if input_path.lower().endswith(".zip"):
+    # 判断输入类型
+    is_json = False
+    if input_path.lower().endswith(".json"):
+        is_json = True
+        json_path = input_path
+    elif input_path.lower().endswith(".zip"):
+        # zip 文件，先解压
         print("正在解压 zip 文件...", file=sys.stderr)
         temp_dir = tempfile.mkdtemp(prefix="apple_health_")
         export_dir = extract_zip(input_path, temp_dir)
         print(f"解压完成: {export_dir}", file=sys.stderr)
     elif os.path.isdir(input_path):
-        export_dir = input_path
+        # 目录：检查是 XML 还是 JSON
+        json_files = find_json_files(input_path)
+        if json_files:
+            is_json = True
+            json_path = input_path
+        else:
+            export_dir = input_path
     else:
-        print(f"错误: 请提供目录或 zip 文件: {input_path}", file=sys.stderr)
+        print(f"错误: 请提供目录、zip 文件或 JSON 文件: {input_path}", file=sys.stderr)
         sys.exit(1)
 
-    # 查找 XML 文件
-    print("正在查找 Apple Health 数据文件...", file=sys.stderr)
-    try:
-        xml_path = find_health_xml(export_dir)
-    except FileNotFoundError as e:
-        print(f"错误: {e}", file=sys.stderr)
-        sys.exit(1)
+    # ── JSON 模式（快捷指令输出）──
+    if is_json:
+        if os.path.isfile(json_path):
+            print(f"正在解析 JSON: {os.path.basename(json_path)}", file=sys.stderr)
+            parse_result = parse_json_health_data(json_path)
+        else:
+            print(f"正在合并目录中的 JSON 文件...", file=sys.stderr)
+            parse_result = parse_multiple_json(json_path)
+        print(f"解析完成: {parse_result.record_count:,} 条记录", file=sys.stderr)
+    else:
+        # ── XML 模式（完整导出）──
+        print("正在查找 Apple Health 数据文件...", file=sys.stderr)
+        try:
+            xml_path = find_health_xml(export_dir)
+        except FileNotFoundError as e:
+            print(f"错误: {e}", file=sys.stderr)
+            sys.exit(1)
 
-    file_size_mb = os.path.getsize(xml_path) / (1024 * 1024)
-    print(f"找到: {os.path.basename(xml_path)} ({file_size_mb:.0f} MB)", file=sys.stderr)
+        file_size_mb = os.path.getsize(xml_path) / (1024 * 1024)
+        print(f"找到: {os.path.basename(xml_path)} ({file_size_mb:.0f} MB)", file=sys.stderr)
 
-    # 解析
-    print("正在解析数据（大文件可能需要 15-30 秒）...", file=sys.stderr)
+        # 解析
+        print("正在解析数据（大文件可能需要 15-30 秒）...", file=sys.stderr)
 
-    def progress(count):
-        print(f"  已处理 {count:,} 条记录...", end="\r", file=sys.stderr)
+    if not is_json:
+        def progress(count):
+            print(f"  已处理 {count:,} 条记录...", end="\r", file=sys.stderr)
 
-    parse_result = parse_health_data(xml_path, progress_callback=progress)
-    print(f"\n解析完成: {parse_result.record_count:,} 条记录, "
-          f"{parse_result.workout_count} 条运动记录 "
-          f"({parse_result.parse_time_sec:.1f}秒)", file=sys.stderr)
+        parse_result = parse_health_data(xml_path, progress_callback=progress)
+        print(f"\n解析完成: {parse_result.record_count:,} 条记录, "
+              f"{parse_result.workout_count} 条运动记录 "
+              f"({parse_result.parse_time_sec:.1f}秒)", file=sys.stderr)
 
     # 分析
     print("正在分析数据...", file=sys.stderr)

@@ -19,6 +19,24 @@ def generate_html_report(result: AnalysisResult) -> str:
     cp = result.calorie_plan
     p = result.user_profile
 
+    # 安全取值（None → 默认值）
+    bmi_val = wt.bmi or 0
+    bmi_cat = wt.bmi_category or "—"
+    rhr = ch.resting_hr_current or 0
+    vo2 = ch.vo2max_current or 0
+    vo2_cat = ch.vo2max_category or "—"
+    height = p.height_cm or 0
+    age = p.age or 0
+    sex = p.biological_sex or ""
+    cur_weight = wt.current_kg or 0
+    change_30d = wt.recent_30d_change_kg or 0
+
+    # 预计算显示值（避免 f-string 作用域问题）
+    rhr_display = str(int(rhr)) if rhr else "—"
+    vo2_display = f"{vo2:.1f}" if vo2 else "—"
+    weight_display = f"{cur_weight:.1f}"
+    bmi_display = f"{bmi_val:.1f}" if bmi_val else "—"
+
     # ── 准备图表数据 ──
 
     # 体重趋势（按月）
@@ -58,8 +76,8 @@ def generate_html_report(result: AnalysisResult) -> str:
     daily_rows = ""
     for s in result.daily_summaries[-14:]:
         w = f"{s.weight_avg:.1f}" if s.weight_avg else "—"
-        rhr = f"{s.resting_hr:.0f}" if s.resting_hr else "—"
-        vo2 = f"{s.vo2max:.1f}" if s.vo2max else "—"
+        s_rhr = f"{s.resting_hr:.0f}" if s.resting_hr else "—"
+        s_vo2 = f"{s.vo2max:.1f}" if s.vo2max else "—"
         types = ", ".join(s.workout_types[:3]) if s.workout_types else "—"
         daily_rows += f"""
         <tr>
@@ -68,21 +86,21 @@ def generate_html_report(result: AnalysisResult) -> str:
             <td>{s.steps:,}</td>
             <td>{s.active_energy_kcal:,.0f}</td>
             <td>{s.exercise_min:.0f}</td>
-            <td>{rhr}</td>
-            <td>{vo2}</td>
+            <td>{s_rhr}</td>
+            <td>{s_vo2}</td>
             <td>{types}</td>
         </tr>"""
 
     # 训练计划
     from .training_plan import generate_plan
     plan = generate_plan(
-        current_weight=wt.current_kg,
-        goal_weight=cp.goal_weight_kg if cp else None,
-        avg_daily_steps=ap.avg_daily_steps,
-        avg_daily_exercise_min=ap.avg_daily_exercise_min,
+        current_weight=float(cur_weight or 0),
+        goal_weight=float(cp.goal_weight_kg) if cp and cp.goal_weight_kg else None,
+        avg_daily_steps=float(ap.avg_daily_steps or 0),
+        avg_daily_exercise_min=float(ap.avg_daily_exercise_min or 0),
         recent_workouts=ap.recent_30d_types,
-        vo2max=ch.vo2max_current,
-        resting_hr=ch.resting_hr_current,
+        vo2max=float(vo2 or 0),
+        resting_hr=float(rhr or 0),
     )
 
     plan_rows = ""
@@ -238,7 +256,7 @@ def generate_html_report(result: AnalysisResult) -> str:
 <div class="container">
     <h1>Apple Health 健康分析报告</h1>
     <p class="subtitle">
-        {p.biological_sex or ''} · {p.age or '?'}岁 · {p.height_cm or '?'}cm ·
+        {sex} · {age}岁 · {height:.0f}cm ·
         分析周期: 最近 {result.analysis_period_days} 天 ·
         生成于 {datetime.now().strftime('%Y-%m-%d %H:%M')}
     </p>
@@ -255,8 +273,8 @@ def generate_html_report(result: AnalysisResult) -> str:
         </div>
         <div class="card">
             <h2>⚖️ 体重</h2>
-            <div class="stat-value">{wt.current_kg:.1f} kg</div>
-            <div class="stat-label">BMI {wt.bmi:.1f} ({wt.bmi_category})</div>
+            <div class="stat-value">{weight_display} kg</div>
+            <div class="stat-label">BMI {bmi_display} ({bmi_cat})</div>
             <div style="margin-top:12px;">
                 <div class="stat-row">
                     <span>起始体重</span><span>{wt.first_record_kg:.1f} kg</span>
@@ -289,12 +307,12 @@ def generate_html_report(result: AnalysisResult) -> str:
             <h2>💓 心肺健康</h2>
             <div style="display:flex;gap:30px;margin-bottom:10px;">
                 <div>
-                    <div class="stat-value" style="font-size:1.8em;">{ch.resting_hr_current or '—'}</div>
+                    <div class="stat-value" style="font-size:1.8em;">{rhr_display}</div>
                     <div class="stat-label">静息心率 (bpm)</div>
                 </div>
                 <div>
-                    <div class="stat-value" style="font-size:1.8em;">{ch.vo2max_current or '—'}</div>
-                    <div class="stat-label">VO2Max ({ch.vo2max_category or '—'})</div>
+                    <div class="stat-value" style="font-size:1.8em;">{vo2_display}</div>
+                    <div class="stat-label">VO2Max ({vo2_cat})</div>
                 </div>
             </div>
         </div>
