@@ -1,0 +1,4 @@
+# No external dependencies required — uses Python standard library only.
+# Optional: uncomment if you want PDF/Word report export.
+# reportlab>=4.0
+# python-docx>=1.0
