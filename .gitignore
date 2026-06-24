@@ -8,6 +8,8 @@ build/
 *.egg
 .DS_Store
 *.xml
+*.shortcut
 report.txt
 *.txt
 !requirements.txt
+health_report.html
