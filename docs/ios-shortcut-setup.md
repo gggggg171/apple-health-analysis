@@ -1,163 +1,158 @@
 # iOS 快捷指令配置指南
 
-通过 iPhone 快捷指令自动导出 Apple Health 数据到 iCloud Drive，
-配合 Mac 端的 `--watch` 模式实现每日自动分析。
+通过 iPhone 快捷指令实现两种数据同步方式：
 
-## 第一步：创建 iCloud 同步文件夹
+- **方式 A**：快捷指令每日自动查询关键数据 → JSON → iCloud → Mac 自动分析
+- **方式 B**：手动导出完整数据 → zip → iCloud → Mac 自动分析
 
-在 Mac 上创建监控目录：
+---
 
-```bash
-mkdir -p ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport
-```
+## 方式 A：快捷指令每日自动查询（全自动）
 
-这个目录会通过 iCloud Drive 自动在 iPhone 和 Mac 之间同步。
-
-## 第二步：在 iPhone 上创建快捷指令
-
-### 2.1 打开快捷指令 App
-
-iPhone 上打开「快捷指令」（Shortcuts）App，点击右上角 `+` 新建。
-
-### 2.2 添加操作
-
-按顺序添加以下操作（在搜索框中搜索操作名称）：
-
-#### 操作 1：获取健康样本
-1. 搜索「健康」→ 选择「获取健康样本的类型」
-2. 样本类型选择「步骤」
-3. 日期范围：选择「过去 7 天」（或你想要的范围）
-
-> **注意**：iOS 快捷指令对健康数据的直接导出支持有限。
-> 更完整的方案见下方「推荐替代方案」。
-
-### 推荐替代方案：使用 Health Auto Export
-
-由于 iOS 快捷指令对健康数据导出的支持比较有限，推荐使用免费 App：
-
-#### 方案 A：Health Auto Export（推荐）
-
-1. 在 App Store 搜索并安装 **Health Auto Export**（免费版即可）
-2. 打开 App → 允许访问健康数据
-3. 设置：
-   - 导出格式：**JSON**
-   - 保存位置：**iCloud Drive**
-   - 文件夹：**HealthExport**（即上面创建的目录）
-   - 自动导出：**开启**
-   - 频率：**每天**
-
-#### 方案 B：快捷指令 + 手动触发
-
-如果不想装第三方 App，可以创建一个手动触发的快捷指令：
-
-1. 打开「快捷指令」→ 新建
-2. 搜索添加以下操作：
-   - 「健康」→「获取健康样本的类型」（每种类型各加一个）
-   - 「文件」→「保存文件」→ 选择 iCloud Drive/HealthExport
-
-3. 命名为「导出健康数据」
-4. 每天手动运行一次，或设置自动化定时提醒
-
-## 第三步：Mac 端启动监控
-
-在 Mac 终端中运行：
+### 第一步：在 Mac 上创建同步文件夹
 
 ```bash
-cd /path/to/apple-health-analysis
-
-# 启动监控（每 60 秒检查一次，目标体重 72kg）
-python analyze.py ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/ \
-    --watch --target 72 --html --interval 60
+mkdir -p ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/daily
 ```
 
-### 后台运行
+### 第二步：在 iPhone 上创建快捷指令
+
+打开「快捷指令」App → 点击右上角 `+` → 按以下步骤添加操作：
+
+#### 操作 1：获取当前日期
+1. 搜索「日期」→ 添加「当前日期」
+2. 搜索「格式化日期」→ 添加，格式选「自定义」
+3. 格式字符串输入：`yyyy-MM-dd`
+4. 连接到「当前日期」
+
+#### 操作 2：查询步数
+1. 搜索「健康」→ 添加「查找健康样本」
+2. 类型选「步数」
+3. 添加过滤条件：「开始日期」→「是」→「今天」
+4. 添加「统计」操作 → 选「求和」→ 连接到健康样本结果
+
+#### 操作 3：查询体重
+1. 搜索「健康」→ 添加「查找健康样本」
+2. 类型选「体重」
+3. 添加过滤条件：「开始日期」→「是」→「今天」
+4. 排序：「开始日期」→ 降序
+5. 限制：1 条
+
+#### 操作 4：查询静息心率
+1. 搜索「健康」→ 添加「查找健康样本」
+2. 类型选「静息心率」
+3. 添加过滤条件：「开始日期」→「是」→「今天」
+4. 排序：「开始日期」→ 降序
+5. 限制：1 条
+
+#### 操作 5：查询活动能量
+1. 搜索「健康」→ 添加「查找健康样本」
+2. 类型选「活动能量」
+3. 添加过滤条件：「开始日期」→「是」→「今天」
+4. 添加「统计」操作 → 选「求和」
+
+#### 操作 6：查询运动时间
+1. 搜索「健康」→ 添加「查找健康样本」
+2. 类型选「Apple 运动时间」
+3. 添加过滤条件：「开始日期」→「是」→「今天」
+4. 添加「统计」操作 → 选「求和」
+
+#### 操作 7：查询锻炼记录
+1. 搜索「健康」→ 添加「查找锻炼」
+2. 添加过滤条件：「开始日期」→「是」→「今天」
+
+#### 操作 8：构建 JSON 并保存
+1. 搜索「文本」→ 添加「文本」操作
+2. 输入以下模板（用变量替换占位符）：
+
+```json
+{
+  "export_date": "格式化日期结果",
+  "days": [
+    {
+      "date": "格式化日期结果",
+      "steps": 步数求和结果,
+      "weight_kg": 体重值,
+      "resting_heart_rate": 静息心率值,
+      "active_energy_kcal": 活动能量求和结果,
+      "exercise_minutes": 运动时间求和结果,
+      "workouts": [
+        {
+          "type": "锻炼类型",
+          "duration_min": 锻炼时长,
+          "kcal": 锻炼卡路里
+        }
+      ]
+    }
+  ]
+}
+```
+
+3. 搜索「文件」→ 添加「保存文件」
+4. 位置选：`iCloud Drive/HealthExport/daily/`
+5. 文件名输入：`health_格式化日期结果.json`
+6. 关闭「询问存储位置」
+
+#### 操作 9：运行脚本（可选，需要 Mac 在线）
+1. 搜索「SSH」→ 添加「通过 SSH 运行脚本」
+2. 主机：你的 Mac IP 地址
+3. 用户：你的 Mac 用户名
+4. 输入：
+```bash
+cd ~/Desktop/Hermes文件/apple-health-analysis && python analyze.py ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/daily/ --html
+```
+
+### 第三步：设置自动化运行
+
+1. 打开「快捷指令」App → 底部「自动化」标签
+2. 点击 `+` → 「创建个人自动化」
+3. 选「特定时间」→ 设置每天（如 22:00）
+4. 选择刚才创建的快捷指令
+5. 关闭「运行前询问」
+
+### 第四步：Mac 端启动监控
 
 ```bash
-# 使用 nohup 后台运行
-nohup python analyze.py ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/ \
-    --watch --target 72 --html --interval 300 > ~/health_watch.log 2>&1 &
+cd ~/Desktop/Hermes文件/apple-health-analysis
 
-# 查看日志
-tail -f ~/health_watch.log
-
-# 停止后台进程
-pkill -f "analyze.py.*--watch"
+# 监控 daily 目录中的 JSON 文件
+python analyze.py ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/daily/ \
+    --watch --target 72 --html --interval 300
 ```
 
-### 开机自启（可选）
+---
 
-创建 LaunchAgent 实现开机自动启动监控：
+## 方式 B：手动导出完整数据（每周一次）
 
-```bash
-cat > ~/Library/LaunchAgents/com.apple-health-watch.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.apple-health-watch</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/bin/python3</string>
-        <string>/Users/USERNAME/apple-health-analysis/analyze.py</string>
-        <string>/Users/USERNAME/Library/Mobile Documents/com~apple~CloudDocs/HealthExport</string>
-        <string>--watch</string>
-        <string>--target</string>
-        <string>72</string>
-        <string>--html</string>
-        <string>--interval</string>
-        <string>300</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/Users/USERNAME/health_watch.log</string>
-    <key>StandardErrorPath</key>
-    <string>/Users/USERNAME/health_watch.log</string>
-</dict>
-</plist>
-EOF
+### 第一步：在 iPhone 上导出
 
-# 替换 USERNAME 为你的用户名
-sed -i '' "s/USERNAME/$(whoami)/g" ~/Library/LaunchAgents/com.apple-health-watch.plist
+1. 打开「健康」App
+2. 点击右上角头像
+3. 点击「导出所有健康数据」
+4. 选择「存储到"文件"」
+5. 选择 `iCloud Drive/HealthExport/` 文件夹
+6. 点击「存储」
 
-# 加载
-launchctl load ~/Library/LaunchAgents/com.apple-health-watch.plist
+### 第二步：Mac 端自动处理
 
-# 卸载
-# launchctl unload ~/Library/LaunchAgents/com.apple-health-watch.plist
-```
+同上，`--watch` 模式会自动检测新的 zip 文件并分析。
+
+---
 
 ## 完整工作流
 
 ```
-iPhone                          iCloud Drive                    Mac
-┌──────────────┐               ┌──────────────┐           ┌──────────────┐
-│  Apple Health │               │              │           │              │
-│     数据      │──自动导出──→  │ HealthExport │──同步──→  │ --watch 模式 │
-│              │  (每天定时)    │   /data.zip  │           │  自动检测分析 │
-└──────────────┘               └──────────────┘           └──────┬───────┘
-                                                                 │
-                                                    ┌────────────▼───────────┐
-                                                    │   reports/             │
-                                                    │   ├── latest.html      │
-                                                    │   └── health_*.html    │
-                                                    └────────────────────────┘
+方式 A（每日自动）:
+iPhone 快捷指令 → 查询数据 → 保存 JSON → iCloud 同步 → Mac --watch → HTML 报告
+
+方式 B（每周手动）:
+iPhone 健康 App → 导出 zip → iCloud 同步 → Mac --watch → 完整 HTML 报告
 ```
 
-## 常见问题
+## 注意事项
 
-**Q: iCloud 同步延迟怎么办？**
-A: 设置 `--interval 300`（5分钟检查一次），给同步留足时间。
-
-**Q: 导出文件很大怎么办？**
-A: Apple Health 导出通常是 zip 格式，工具会自动解压分析后清理临时文件。
-
-**Q: 如何查看报告？**
-A: 报告保存在 `HealthExport/reports/` 目录下，`latest.html` 始终指向最新报告。
-   双击即可在浏览器中打开。
-
-**Q: 多天的数据会冲突吗？**
-A: 不会。工具通过文件名和修改时间判断是否已处理，每个导出文件独立分析。
+1. **快捷指令查询的数据不如 XML 导出完整**——缺少 VO2Max、飞行爬升等字段
+2. **JSON 格式每天一个文件**，工具会自动合并分析
+3. **iCloud 同步可能有延迟**，设置 `--interval 300`（5分钟）给同步留时间
+4. **首次运行需要授权**——快捷指令会请求健康数据访问权限
+5. **方式 A 和 B 可以同时使用**——JSON 做日常监控，zip 做完整分析
