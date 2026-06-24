@@ -40,7 +40,10 @@ python analyze.py /path/to/apple_health_export/ --target 72 --html
 # 只看最近 30 天
 python analyze.py data.zip --days 30 --html
 
-# 监控模式：自动检测新文件并分析
+# 选择配色主题
+python analyze.py data.zip --html --theme sunset
+
+# 监控模式（Mac）：自动检测新文件并分析
 python analyze.py ~/HealthExport/ --watch --target 72 --html
 ```
 
@@ -71,6 +74,55 @@ python analyze.py ~/Library/Mobile\ Documents/com~apple~CloudDocs/HealthExport/ 
 ```
 
 报告保存在 `HealthExport/reports/` 目录下，`latest.html` 始终指向最新报告。
+
+## 手动使用（Windows / Mac 通用）
+
+如果不用 iCloud 同步，也可以手动把 iPhone 导出的文件传到电脑上分析。
+
+### 第一步：从 iPhone 导出
+
+1. 打开 iPhone「健康」App
+2. 点右上角头像 → 「导出所有健康数据」
+3. 点「导出所有健康数据」
+4. 等待导出完成（数据多的话可能需要几分钟）
+5. 导出完成后会弹出分享菜单
+
+### 第二步：把文件传到电脑
+
+有几种方式，任选一种：
+
+**方式 A：AirDrop（Mac）**
+- 分享菜单里选 AirDrop → 选你的 Mac
+- 文件会保存到「下载」文件夹
+
+**方式 B：微信/QQ 发送**
+- 分享菜单里选微信或 QQ
+- 发给「文件传输助手」或自己
+- 在电脑端微信/QQ 下载文件
+
+**方式 C：数据线连接**
+- 用数据线连接 iPhone 和电脑
+- 打开 iTunes（Windows）或 Finder（Mac）
+- 选你的 iPhone → 文件共享 → 找到「健康」
+- 把导出的 zip 文件拖到电脑上
+
+**方式 D：iCloud Drive（Mac/Windows）**
+- 分享菜单里选「存储到"文件"」→ iCloud Drive
+- 在电脑上打开 iCloud Drive 文件夹找到 zip 文件
+
+### 第三步：运行分析
+
+导出的文件名为 `导出.zip`，在终端运行：
+
+```bash
+# Windows（PowerShell 或 CMD）
+python analyze.py C:\Users\你的用户名\Downloads\导出.zip --target 72 --html
+
+# Mac
+python analyze.py ~/Downloads/导出.zip --target 72 --html
+```
+
+报告会生成在当前目录下，双击 `.html` 文件即可在浏览器中查看。
 
 ## 项目结构
 
