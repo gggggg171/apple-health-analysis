@@ -61,6 +61,18 @@ def parse_json_health_data(json_path: str) -> ParseResult:
     records = {}
     workouts = []
 
+    # 读取用户信息（如果有）
+    profile_data = data.get("user_profile", {})
+    if profile_data.get("height_cm"):
+        user_profile.height_cm = float(profile_data["height_cm"])
+    if profile_data.get("age"):
+        from datetime import datetime
+        # 用年龄反推大致出生年
+        user_profile.date_of_birth = f"{datetime.now().year - int(profile_data['age'])}-01-01"
+    if profile_data.get("sex"):
+        sex_map = {"male": "男", "female": "女"}
+        user_profile.biological_sex = sex_map.get(profile_data["sex"], profile_data["sex"])
+
     days = data.get("days", [])
 
     for day in days:

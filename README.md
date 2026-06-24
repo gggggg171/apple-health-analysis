@@ -2,6 +2,10 @@
 
 从 Apple Health 导出数据中提取、分析和可视化你的健康趋势。支持体重追踪、运动分析、心肺功能评估，并生成个性化训练计划。
 
+![Dashboard](assets/dashboard.png)
+
+![Charts](assets/charts.png)
+
 ## 功能
 
 - **体重趋势分析**：月均值、日均值、波动范围，区分真实增重与水分波动
